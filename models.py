@@ -17,9 +17,9 @@ def sinusoidal_positional_encoding(seq_len, d_model, device):
 # ======== Transformer Blocks ========
 
 class SelfAttention(nn.Module):
-    def __init__(self, d_model, n_heads):
+    def __init__(self, d_model, n_heads, device='cpu'):
         super().__init__()
-        self.attn = nn.MultiheadAttention(d_model, n_heads, batch_first=True)
+        self.attn = nn.MultiheadAttention(d_model, n_heads, batch_first=True, device=device)
         self.last_attn = None  # store for visualization
 
     def forward(self, x, attn_mask=None, key_padding_mask=None):
@@ -29,9 +29,9 @@ class SelfAttention(nn.Module):
 # end SelfAttention
 
 class CrossAttention(nn.Module):
-    def __init__(self, d_model, n_heads):
+    def __init__(self, d_model, n_heads, device='cpu'):
         super().__init__()
-        self.attn = nn.MultiheadAttention(d_model, n_heads, batch_first=True)
+        self.attn = nn.MultiheadAttention(d_model, n_heads, batch_first=True, device=device)
         self.last_attn = None
 
     def forward(self, q, kv, attn_mask=None, key_padding_mask=None):
@@ -41,16 +41,16 @@ class CrossAttention(nn.Module):
 # end CrossAttention
 
 class TransformerBlock(nn.Module):
-    def __init__(self, d_model, n_heads, dim_ff):
+    def __init__(self, d_model, n_heads, dim_ff, device='cpu'):
         super().__init__()
-        self.self_attn = SelfAttention(d_model, n_heads)
+        self.self_attn = SelfAttention(d_model, n_heads, device=device)
         self.ff = nn.Sequential(
-            nn.Linear(d_model, dim_ff),
-            nn.ReLU(),
-            nn.Linear(dim_ff, d_model),
+            nn.Linear(d_model, dim_ff, device=device),
+            nn.GELU(),
+            nn.Linear(dim_ff, d_model, device=device),
         )
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
+        self.norm1 = nn.LayerNorm(d_model, device=device)
+        self.norm2 = nn.LayerNorm(d_model, device=device)
 
     def forward(self, x, attn_mask=None, key_padding_mask=None):
         # Self-attention
@@ -64,18 +64,18 @@ class TransformerBlock(nn.Module):
 
 class CrossTransformerBlock(nn.Module):
     """For H-encoder with self + cross attention"""
-    def __init__(self, d_model, n_heads, dim_ff):
+    def __init__(self, d_model, n_heads, dim_ff, device='cpu'):
         super().__init__()
-        self.self_attn = SelfAttention(d_model, n_heads)
-        self.cross_attn = CrossAttention(d_model, n_heads)
+        self.self_attn = SelfAttention(d_model, n_heads, device=device)
+        self.cross_attn = CrossAttention(d_model, n_heads, device=device)
         self.ff = nn.Sequential(
-            nn.Linear(d_model, dim_ff),
-            nn.ReLU(),
-            nn.Linear(dim_ff, d_model),
+            nn.Linear(d_model, dim_ff, device=device),
+            nn.GELU(),
+            nn.Linear(dim_ff, d_model, device=device),
         )
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
-        self.norm3 = nn.LayerNorm(d_model)
+        self.norm1 = nn.LayerNorm(d_model, device=device)
+        self.norm2 = nn.LayerNorm(d_model, device=device)
+        self.norm3 = nn.LayerNorm(d_model, device=device)
 
     def forward(self, x, mem, attn_mask=None, key_padding_mask=None):
         # Self-attention on H
@@ -93,18 +93,28 @@ class CrossTransformerBlock(nn.Module):
 # ======== Models ========
 
 class DualEncoderModel(nn.Module):
-    def __init__(self, m_vocab_size, h_vocab_size, seq_len, d_model=128, n_heads=4, num_layers=2, dim_ff=256):
+    def __init__(
+            self, 
+            m_vocab_size, 
+            h_vocab_size, 
+            seq_len, 
+            d_model=128, 
+            n_heads=4, 
+            num_layers=2, 
+            dim_ff=256,
+            device='cpu'
+        ):
         super().__init__()
         self.pos = sinusoidal_positional_encoding(
-            seq_len, d_model
+            seq_len, d_model, device=device
         )
-        self.m_embed = nn.Embedding(m_vocab_size, d_model)
-        self.h_embed = nn.Embedding(h_vocab_size, d_model)
+        self.m_embed = nn.Embedding(m_vocab_size, d_model, device=device)
+        self.h_embed = nn.Embedding(h_vocab_size, d_model, device=device)
 
-        self.melody_encoder = nn.ModuleList([TransformerBlock(d_model, n_heads, dim_ff) for _ in range(num_layers)])
-        self.harmony_encoder = nn.ModuleList([CrossTransformerBlock(d_model, n_heads, dim_ff) for _ in range(num_layers)])
+        self.melody_encoder = nn.ModuleList([TransformerBlock(d_model, n_heads, dim_ff, device=device) for _ in range(num_layers)])
+        self.harmony_encoder = nn.ModuleList([CrossTransformerBlock(d_model, n_heads, dim_ff, device=device) for _ in range(num_layers)])
 
-        self.out_proj = nn.Linear(d_model, h_vocab_size)
+        self.out_proj = nn.Linear(d_model, h_vocab_size, device=device)
     # end init
 
     def forward(self, m_seq, h_seq, h_attn_mask=None):
@@ -128,15 +138,25 @@ class DualEncoderModel(nn.Module):
 # end DualEncoderModel
 
 class SingleEncoderModel(nn.Module):
-    def __init__(self, m_vocab_size, h_vocab_size, seq_len, d_model=128, n_heads=4, num_layers=4, dim_ff=256):
+    def __init__(
+            self, 
+            m_vocab_size, 
+            h_vocab_size, 
+            seq_len, 
+            d_model=128, 
+            n_heads=4, 
+            num_layers=2, 
+            dim_ff=256,
+            device='cpu'
+        ):
         super().__init__()
         self.pos = sinusoidal_positional_encoding(
-            seq_len, d_model
+            seq_len, d_model, device=device
         )
-        self.m_embed = nn.Embedding(m_vocab_size, d_model)
-        self.h_embed = nn.Embedding(h_vocab_size, d_model)
-        self.encoder = nn.ModuleList([TransformerBlock(d_model, n_heads, dim_ff) for _ in range(num_layers)])
-        self.out_proj = nn.Linear(d_model, h_vocab_size)
+        self.m_embed = nn.Embedding(m_vocab_size, d_model, device=device)
+        self.h_embed = nn.Embedding(h_vocab_size, d_model, device=device)
+        self.encoder = nn.ModuleList([TransformerBlock(d_model, n_heads, dim_ff, device=device) for _ in range(num_layers)])
+        self.out_proj = nn.Linear(d_model, h_vocab_size, device=device)
     # end init
 
     def forward(self, m_seq, h_seq, attn_mask=None):

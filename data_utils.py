@@ -143,8 +143,8 @@ class HM_Dataset(Dataset):
     def __getitem__(self, idx):
         sample = self.data[idx]
         # Return as torch tensors
-        return (
-            torch.tensor(sample["h_sequence"], dtype=torch.long),
-            torch.tensor(sample["m_sequence"], dtype=torch.long)
-        )
+        return {
+            'h_seq': torch.tensor(sample["h_sequence"], dtype=torch.long),
+            'm_seq': torch.tensor(sample["m_sequence"], dtype=torch.long)
+        }
 # end HM_Dataset
