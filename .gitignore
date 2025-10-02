@@ -1,4 +1,6 @@
 data/
+saved_models/
+results/
 
 *.zip
 *.pickle
