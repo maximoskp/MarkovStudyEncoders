@@ -121,9 +121,17 @@ def generate_dataset_pickle(file_path, num_samples, h_token_ids, m_token_ids, T_
     dataset = []
     for _ in tqdm( range(num_samples) ):
         dataset.append(generate_sample(h_token_ids, m_token_ids, T_h, P_m_h, seq_len=seq_len))
+    
+    dataset_info = {
+        'dataset': dataset,
+        'h_vocab_size': len(h_token_ids) + 1, # +1 for the mask_token_id
+        'm_vocab_size': len(m_token_ids),
+        'seq_len': seq_len,
+        'mask_token_id': len(h_token_ids)
+    }
 
     with open(file_path, "wb") as f:
-        pickle.dump(dataset, f)
+        pickle.dump(dataset_info, f)
     print(f"Saved {num_samples} samples to {file_path}")
 # end generate_dataset_pickle
 
@@ -135,7 +143,13 @@ class HM_Dataset(Dataset):
 
     def __init__(self, file_path):
         with open(file_path, "rb") as f:
-            self.data = pickle.load(f)
+            self.dataset_info = pickle.load(f)
+            self.data = self.dataset_info['dataset']
+            self.h_vocab_size = self.dataset_info['h_vocab_size']
+            self.m_vocab_size = self.dataset_info['m_vocab_size']
+            self.seq_len = self.dataset_info['seq_len']
+            self.mask_token_id = self.dataset_info['mask_token_id']
+    # end init
 
     def __len__(self):
         return len(self.data)
