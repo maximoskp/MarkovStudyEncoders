@@ -115,6 +115,7 @@ class DualEncoderModel(nn.Module):
         self.harmony_encoder = nn.ModuleList([CrossTransformerBlock(d_model, n_heads, dim_ff, device=device) for _ in range(num_layers)])
 
         self.out_proj = nn.Linear(d_model, h_vocab_size, device=device)
+        self.device = device
     # end init
 
     def forward(self, m_seq, h_seq, h_attn_mask=None):
@@ -153,10 +154,12 @@ class SingleEncoderModel(nn.Module):
         self.pos = sinusoidal_positional_encoding(
             seq_len, d_model, device=device
         )
+        self.seq_len = seq_len
         self.m_embed = nn.Embedding(m_vocab_size, d_model, device=device)
         self.h_embed = nn.Embedding(h_vocab_size, d_model, device=device)
         self.encoder = nn.ModuleList([TransformerBlock(d_model, n_heads, dim_ff, device=device) for _ in range(num_layers)])
         self.out_proj = nn.Linear(d_model, h_vocab_size, device=device)
+        self.device = device
     # end init
 
     def forward(self, m_seq, h_seq, attn_mask=None):
@@ -169,7 +172,7 @@ class SingleEncoderModel(nn.Module):
         x = torch.cat([m, h], dim=1)
         for layer in self.encoder:
             x = layer(x, attn_mask=attn_mask)
-        logits = self.out_proj(x)
+        logits = self.out_proj(x[:, -self.seq_len:, :])
         return logits
     # end forward
 # end SingleEncoderModel

@@ -1,6 +1,6 @@
 import pickle
 from data_utils import HM_Dataset
-from models import SingleEncoderModel # DualEncoderModel
+from models import DualEncoderModel
 import torch
 from torch.utils.data import DataLoader
 import torch
@@ -71,7 +71,7 @@ def main():
     # loss_fn = torch.nn.CrossEntropyLoss(
     #     weight=class_weights.to(device), ignore_index=-100
     # )
-    model = SingleEncoderModel(
+    model = DualEncoderModel(
         train_dataset.m_vocab_size, 
         train_dataset.h_vocab_size, 
         train_dataset.seq_len, 
@@ -81,11 +81,11 @@ def main():
     optimizer = AdamW(model.parameters(), lr=lr)
 
     # save results
-    os.makedirs('results/SE/', exist_ok=True)
-    results_path = 'results/SE/' + subfolder + '.csv'
+    os.makedirs('results/DE/', exist_ok=True)
+    results_path = 'results/DE/' + subfolder + '.csv'
 
-    os.makedirs('saved_models/SE/', exist_ok=True)
-    save_dir = 'saved_models/SE/'
+    os.makedirs('saved_models/DE/', exist_ok=True)
+    save_dir = 'saved_models/DE/'
     transformer_path = save_dir + subfolder + '.pt'
 
     train_with_curriculum(

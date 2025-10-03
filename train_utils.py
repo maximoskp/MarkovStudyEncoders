@@ -7,7 +7,6 @@ import random
 import csv
 import numpy as np
 import os
-from transformers import get_cosine_schedule_with_warmup
 
 perplexity_metric = Perplexity(ignore_index=-100)
 
@@ -70,14 +69,13 @@ def validation_loop(model, valloader, mask_token_id, bar_token_id, \
             for batch in tepoch:
                 perplexity_metric.reset()
                 m_seq = batch["m_seq"].to(device)           # (B, 256, 140)
-                h_seq = batch["m_seq"].to(device)         # (B, 256)
+                h_seq = batch["h_seq"].to(device)         # (B, 256)
                 
                 # Apply masking to h
                 h_visible, h_target = full_to_partial_masking(
                     h_seq,
                     mask_token_id,
                     num_visible,
-                    bar_token_id=bar_token_id
                 )
                 
                 # Forward pass
@@ -133,7 +131,6 @@ def train_with_curriculum(
     model, optimizer, trainloader, valloader, loss_fn, mask_token_id,
     curriculum_type='fixed',
     epochs=100,
-    condition_dim=None,
     exponent=5,
     results_path=None,
     transformer_path=None,
@@ -181,8 +178,8 @@ def train_with_curriculum(
                 perplexity_metric.reset()
                 model.train()
                 m_seq = batch["m_seq"].to(device)           # (B, 256, 140)
-                h_seq = batch["m_seq"].to(device)         # (B, 256)
-
+                h_seq = batch["h_seq"].to(device)         # (B, 256)
+                
                 # Apply masking to h
                 percent_visible = min(1.0, (step+1)/total_steps)**exponent  # 5th power goes around half way near zero
                 L = h_seq.shape[1]
@@ -190,8 +187,7 @@ def train_with_curriculum(
                 h_visible, h_target = full_to_partial_masking(
                     h_seq,
                     mask_token_id,
-                    num_visible,
-                    bar_token_id=bar_token_id
+                    num_visible
                 )
                 
                 # Forward pass
@@ -199,7 +195,6 @@ def train_with_curriculum(
                     m_seq.to(device),
                     h_visible.to(device),
                 )
-
                 # Compute loss only on masked tokens
                 loss = loss_fn(logits.view(-1, logits.size(-1)), h_target.view(-1))
 
