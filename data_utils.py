@@ -46,12 +46,20 @@ def compute_normalized_token_entropy(logits, target_ids, pad_token_id=None):
     return entropy_per_token/max_entropy, entropy_per_batch/max_entropy
 # end compute_token_entropy
 
-def generate_P_h_given_h(diagonal_probability: float, h_size: int, seed: int = None):
+import numpy as np
+
+def generate_P_h_given_h(
+    num_peaks: int,
+    peaks_probability: float,
+    h_size: int,
+    seed: int = None
+):
     """
     Generate first-order Markov transition matrix for h-space.
 
     Args:
-        diagonal_probability: probability mass for self-transition (on diagonal).
+        num_peaks: number of high-probability transitions per h-token.
+        peaks_probability: total probability mass assigned to peaks (0 < peaks_probability < 1).
         h_size: number of h-space tokens.
         seed: random seed for reproducibility.
 
@@ -62,14 +70,24 @@ def generate_P_h_given_h(diagonal_probability: float, h_size: int, seed: int = N
     if seed is not None:
         np.random.seed(seed)
 
+    assert num_peaks < h_size, "num_peaks must be less than h_size"
+    assert 0.0 < peaks_probability < 1.0, "peaks_probability must be in (0, 1)"
+
     h_token_ids = list(range(h_size))
+    T_h = np.zeros((h_size, h_size))
 
-    # Start with diagonal-probability on the diagonal
-    T_h = np.full((h_size, h_size), (1 - diagonal_probability) / (h_size - 1))
-    np.fill_diagonal(T_h, diagonal_probability)
+    # Probability per peak
+    peak_value = peaks_probability / num_peaks
+    # Probability per non-peak (background noise)
+    noise_value = (1.0 - peaks_probability) / (h_size - num_peaks)
 
-    # Normalize rows (safety)
-    T_h = T_h / T_h.sum(axis=1, keepdims=True)
+    for i in range(h_size):
+        # Randomly select distinct target tokens for the peaks
+        peak_indices = np.random.choice(h_size, size=num_peaks, replace=False)
+        T_h[i, :] = noise_value
+        T_h[i, peak_indices] = peak_value
+        # Normalize each row to be safe
+        T_h[i, :] /= T_h[i, :].sum()
 
     return h_token_ids, T_h
 # end generate_P_h_given_h
