@@ -126,7 +126,7 @@ def load_DE(
         else:
             print('Selected device not available: ' + device_name)
             device = torch.device('cpu')
-    model = SingleEncoderModel(
+    model = DualEncoderModel(
         m_vocab_size, 
         h_vocab_size, 
         seq_len, 

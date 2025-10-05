@@ -23,7 +23,13 @@ class SelfAttention(nn.Module):
         self.last_attn = None  # store for visualization
 
     def forward(self, x, attn_mask=None, key_padding_mask=None):
-        out, attn_weights = self.attn(x, x, x, attn_mask=attn_mask, key_padding_mask=key_padding_mask, need_weights=True)
+        out, attn_weights = self.attn(
+            x, x, x,
+            attn_mask=attn_mask,
+            key_padding_mask=key_padding_mask,
+            need_weights=True,
+            average_attn_weights=False
+        )
         self.last_attn = attn_weights  # (batch, heads, seq, seq)
         return out
 # end SelfAttention
@@ -35,7 +41,13 @@ class CrossAttention(nn.Module):
         self.last_attn = None
 
     def forward(self, q, kv, attn_mask=None, key_padding_mask=None):
-        out, attn_weights = self.attn(q, kv, kv, attn_mask=attn_mask, key_padding_mask=key_padding_mask, need_weights=True)
+        out, attn_weights = self.attn(
+            q, kv, kv,
+            attn_mask=attn_mask,
+            key_padding_mask=key_padding_mask,
+            need_weights=True,
+            average_attn_weights=False
+        )
         self.last_attn = attn_weights  # (batch, heads, q_len, kv_len)
         return out
 # end CrossAttention
@@ -51,10 +63,13 @@ class TransformerBlock(nn.Module):
         )
         self.norm1 = nn.LayerNorm(d_model, device=device)
         self.norm2 = nn.LayerNorm(d_model, device=device)
+        self.last_attn_weights = None  # place to store the weights
+    # end init
 
     def forward(self, x, attn_mask=None, key_padding_mask=None):
         # Self-attention
         sa = self.self_attn(x, attn_mask=attn_mask, key_padding_mask=key_padding_mask)
+        self.last_attn_weights = self.self_attn.last_attn.detach()  # store for later
         x = self.norm1(x + sa)
         # Feedforward
         ff = self.ff(x)
@@ -76,13 +91,18 @@ class CrossTransformerBlock(nn.Module):
         self.norm1 = nn.LayerNorm(d_model, device=device)
         self.norm2 = nn.LayerNorm(d_model, device=device)
         self.norm3 = nn.LayerNorm(d_model, device=device)
+        self.self_attn_weights = None  # place to store the weights
+        self.cross_attn_weights = None  # place to store the weights
+    # end init
 
     def forward(self, x, mem, attn_mask=None, key_padding_mask=None):
         # Self-attention on H
         sa = self.self_attn(x, attn_mask=attn_mask, key_padding_mask=key_padding_mask)
+        self.self_attn_weights = self.self_attn.last_attn.detach()  # store for later
         x = self.norm1(x + sa)
         # Cross-attention to M
         ca = self.cross_attn(x, mem)
+        self.cross_attn_weights = self.cross_attn.last_attn.detach()  # store for later
         x = self.norm2(x + ca)
         # Feedforward
         ff = self.ff(x)
@@ -136,6 +156,22 @@ class DualEncoderModel(nn.Module):
         logits = self.out_proj(h)
         return logits
     # end forward
+
+    # optionally add helpers to extract attention maps across layers:
+    def get_attention_maps(self):
+        """
+        Returns lists of per-layer attention tensors for self and cross attentions.
+            self_attns = [layer.last_self_attn, ...]
+            cross_attns = [layer.last_cross_attn, ...]
+        Each element can be None (if not computed) or a tensor (B, nhead, Lh, Lh)/(B, nhead, Lh, Lm).
+        """
+        self_attns = []
+        cross_attns = []
+        for layer in self.harmony_encoder:
+            self_attns.append(layer.self_attn_weights)
+            cross_attns.append(layer.cross_attn_weights)
+        return self_attns, cross_attns
+    # end get_attention_maps
 # end DualEncoderModel
 
 class SingleEncoderModel(nn.Module):
@@ -175,4 +211,17 @@ class SingleEncoderModel(nn.Module):
         logits = self.out_proj(x[:, -self.seq_len:, :])
         return logits
     # end forward
+
+    # optionally add helpers to extract attention maps across layers:
+    def get_attention_maps(self):
+        """
+        Returns lists of per-layer attention tensors for self and cross attentions.
+            self_attns = [layer.last_self_attn, ...]
+        Each element can be None (if not computed) or a tensor (B, nhead, Lh, Lh)/(B, nhead, Lh, Lm).
+        """
+        self_attns = []
+        for layer in self.encoder:
+            self_attns.append(layer.last_attn_weights)
+        return self_attns
+    # end get_attention_maps
 # end SingleEncoderModel

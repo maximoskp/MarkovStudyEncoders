@@ -93,7 +93,6 @@ def save_attention_maps_with_split(all_layers_attns, melody_len, save_dir="attn_
         if attn is None:
             print(f"⚠️ No attention stored in layer {i}. Did you run a forward pass?")
             continue
-
         B, H, L, _ = attn.shape
         
         # ---- Per-head plots ----

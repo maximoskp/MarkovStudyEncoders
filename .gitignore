@@ -1,6 +1,7 @@
 data/
 saved_models/
 results/
+figs/
 
 *.zip
 *.pickle
