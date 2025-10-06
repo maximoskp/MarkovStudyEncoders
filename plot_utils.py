@@ -2,7 +2,41 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 
-def save_attention_maps(all_layers_attns, save_dir="attn_maps", prefix="layer"):
+def diagonal_dominance_metrics(attn_map, k=2):
+    """
+    Compute strict and broad diagonal dominance for an attention map.
+    
+    Args:
+        attn_map: np.ndarray of shape (n, n), rows sum to 1 (attention weights)
+        k: int, window radius for broad dominance
+    
+    Returns:
+        sdd: float, strict diagonal dominance (self-attention)
+        bdd: float, broad diagonal dominance (±k band)
+        contextuality: float, BDD - SDD
+    """
+    n = attn_map.shape[0]
+    assert attn_map.shape[1] == n, "Attention map must be square."
+    total_sum = np.sum(attn_map)
+    if total_sum == 0:
+        return 0.0, 0.0, 0.0  # avoid division by zero
+    # Strict diagonal dominance
+    sdd = np.sum(np.diag(attn_map))/total_sum
+
+    # Broad diagonal dominance (band ±k)
+    bdd_mask = np.zeros_like(attn_map)
+    for i in range(n):
+        start, end = max(0, i - k), min(n, i + k + 1)
+        bdd_mask[i, start:end] = 1
+    bdd = np.sum(attn_map * bdd_mask) / total_sum
+
+    # Contextuality (non-self, local attention)
+    contextuality = bdd - sdd
+
+    return sdd, bdd, contextuality
+# end diagonal_dominance_metrics
+
+def save_attention_maps(all_layers_attns, save_dir="attn_maps", prefix="layer", title_info=False):
     """
     Save attention maps for all layers and all heads, plus an overlay per layer.
 
@@ -68,7 +102,9 @@ def save_attention_maps(all_layers_attns, save_dir="attn_maps", prefix="layer"):
     plt.figure(figsize=(6, 5))
     plt.imshow(avg_all, cmap="gray_r", aspect="auto")
     # plt.colorbar()
-    # plt.title(f"Attention Map - Average across all layers/heads")
+    if title_info:
+        sdd, bdd, contextuality = diagonal_dominance_metrics(avg_all, k=3)
+        plt.title(f"sdd={sdd:.3f}, bdd={bdd:.3f}, ctx={contextuality:.3f}")
     plt.xlabel("Key/Value positions")
     plt.ylabel("Query positions")
     plt.tight_layout()
@@ -78,7 +114,7 @@ def save_attention_maps(all_layers_attns, save_dir="attn_maps", prefix="layer"):
 
 # end save_attention_maps
 
-def save_attention_maps_with_split(all_layers_attns, melody_len, save_dir="attn_maps", prefix="layer"):
+def save_attention_maps_with_split(all_layers_attns, melody_len, save_dir="attn_maps", prefix="layer", title_info=False):
     """
     Save attention maps for all layers and all heads, plus an overlay per layer.
 
@@ -143,6 +179,11 @@ def save_attention_maps_with_split(all_layers_attns, melody_len, save_dir="attn_
     plt.figure(figsize=(6, 5))
     plt.imshow(avg_all, cmap="gray_r", aspect="auto")
     # plt.colorbar()
+    if title_info:
+        sdd_c, bdd_c, contextuality_c = diagonal_dominance_metrics(avg_all[melody_len:, :melody_len], k=3)
+        sdd_s, bdd_s, contextuality_s = diagonal_dominance_metrics(avg_all[melody_len:, melody_len:], k=3)
+        plt.title(f"Self: sdd={sdd_s:.3f}, bdd={bdd_s:.3f}, ctx={contextuality_s:.3f}\n\
+                Cross: sdd={sdd_c:.3f}, bdd={bdd_c:.3f}, ctx={contextuality_c:.3f}")
     # plt.title(f"Attention Map - Average across all layers/heads")
     plt.xlabel("Key/Value positions", fontsize=18)
     plt.ylabel("Query positions", fontsize=18)
