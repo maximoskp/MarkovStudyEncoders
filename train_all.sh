@@ -4,25 +4,32 @@
 
 scripts=(
     # # # SE
-    # "train_SE.py -c fixed -f T2_M2 -g 0 -e 50 -l 1e-4 -b 16"
-    # "train_SE.py -c fixed -f T2_M10 -g 0 -e 50 -l 1e-4 -b 16"
-    # "train_SE.py -c fixed -f T10_M2 -g 0 -e 50 -l 1e-4 -b 16"
-    # "train_SE.py -c fixed -f T10_M10 -g 0 -e 50 -l 1e-4 -b 16"
+    "train_SE.py -c fixed -f T2_M2 -g 1 -e 100 -l 1e-4 -b 16"
+    "train_SE.py -c fixed -f T2_M10 -g 1 -e 100 -l 1e-4 -b 16"
+    "train_SE.py -c fixed -f T10_M2 -g 1 -e 100 -l 1e-4 -b 16"
+    "train_SE.py -c fixed -f T10_M10 -g 1 -e 100 -l 1e-4 -b 16"
     # # # DE
-    # "train_DE.py -c fixed -f T2_M2 -g 0 -e 50 -l 1e-4 -b 16"
-    # "train_DE.py -c fixed -f T2_M10 -g 0 -e 50 -l 1e-4 -b 16"
-    # "train_DE.py -c fixed -f T10_M2 -g 0 -e 50 -l 1e-4 -b 16"
-    # "train_DE.py -c fixed -f T10_M10 -g 0 -e 50 -l 1e-4 -b 16"
-    # # SE
-    "train_SE.py -c fixed -f n_T2_M2 -g 0 -e 50 -l 1e-4 -b 16"
-    "train_SE.py -c fixed -f n_T2_M10 -g 0 -e 50 -l 1e-4 -b 16"
-    "train_SE.py -c fixed -f n_T10_M2 -g 0 -e 50 -l 1e-4 -b 16"
-    "train_SE.py -c fixed -f n_T10_M10 -g 0 -e 50 -l 1e-4 -b 16"
-    # # DE
-    "train_DE.py -c fixed -f n_T2_M2 -g 0 -e 50 -l 1e-4 -b 16"
-    "train_DE.py -c fixed -f n_T2_M10 -g 0 -e 50 -l 1e-4 -b 16"
-    "train_DE.py -c fixed -f n_T10_M2 -g 0 -e 50 -l 1e-4 -b 16"
-    "train_DE.py -c fixed -f n_T10_M10 -g 0 -e 50 -l 1e-4 -b 16"
+    "train_DE.py -c fixed -f T2_M2 -g 1 -e 100 -l 1e-4 -b 16"
+    "train_DE.py -c fixed -f T2_M10 -g 1 -e 100 -l 1e-4 -b 16"
+    "train_DE.py -c fixed -f T10_M2 -g 1 -e 100 -l 1e-4 -b 16"
+    "train_DE.py -c fixed -f T10_M10 -g 1 -e 100 -l 1e-4 -b 16"
+    # # # SE
+    # "train_SE.py -c fixed -f n_T2_M2 -g 1 -e 50 -l 1e-4 -b 16"
+    # "train_SE.py -c fixed -f n_T2_M10 -g 1 -e 50 -l 1e-4 -b 16"
+    # "train_SE.py -c fixed -f n_T10_M2 -g 1 -e 50 -l 1e-4 -b 16"
+    # "train_SE.py -c fixed -f n_T10_M10 -g 1 -e 50 -l 1e-4 -b 16"
+    # # # DE
+    # "train_DE.py -c fixed -f n_T2_M2 -g 1 -e 50 -l 1e-4 -b 16"
+    # "train_DE.py -c fixed -f n_T2_M10 -g 1 -e 50 -l 1e-4 -b 16"
+    # "train_DE.py -c fixed -f n_T10_M2 -g 1 -e 50 -l 1e-4 -b 16"
+    # "train_DE.py -c fixed -f n_T10_M10 -g 1 -e 50 -l 1e-4 -b 16"
+
+    # # # SE
+    "train_SE.py -c fixed -f T2_M20 -g 0 -e 100 -l 1e-4 -b 16"
+    "train_SE.py -c fixed -f T2_M100 -g 0 -e 100 -l 1e-4 -b 16"
+    # # # DE
+    "train_DE.py -c fixed -f T2_M20 -g 0 -e 100 -l 1e-4 -b 16"
+    "train_DE.py -c fixed -f T2_M100 -g 0 -e 100 -l 1e-4 -b 16"
 )
 
 # Name of the conda environment

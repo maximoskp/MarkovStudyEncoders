@@ -1,8 +1,8 @@
 from data_utils import generate_P_h_given_h, \
     generate_P_m_given_h, generate_dataset_pickle, HM_Dataset
 
-h_size = 32
-m_size = 64
+h_size = 512
+m_size = 512
 seq_len = 128
 
 num_samples = {

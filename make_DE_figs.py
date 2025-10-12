@@ -6,6 +6,7 @@ from generate_utils import load_DE, load_SE, nucleus_token_by_token_generate
 import matplotlib.pyplot as plt
 import seaborn as sns
 from plot_utils import save_attention_maps_with_split, save_attention_maps
+from tqdm import tqdm
 
 device_name = 'cpu'
 unmasking_order = 'start' # in ['random', 'start', 'end', 'certain', 'uncertain']
@@ -13,7 +14,6 @@ unmasking_order = 'start' # in ['random', 'start', 'end', 'certain', 'uncertain'
 for nvis in [None, 0]:
     for subfolder in ['T2_M2', 'T10_M2', 'T2_M10', 'T10_M10']:
         test_dataset = HM_Dataset("data/test_" + subfolder + ".pkl")
-        d = test_dataset[0]
         model = load_DE(
             test_dataset.m_vocab_size,
             test_dataset.h_vocab_size,
@@ -22,27 +22,39 @@ for nvis in [None, 0]:
             device_name=device_name,
             nvis=nvis,
         )
-        h_tokens = nucleus_token_by_token_generate(
-            model,
-            d['m_seq'],
-            test_dataset.mask_token_id,
-            temperature=0.5,
-            p=0.9,
-            unmasking_order='start'
-        )
+        total_self_attns = None
+        total_cross_attns = None
+        for d in tqdm(test_dataset):
+            h_tokens = nucleus_token_by_token_generate(
+                model,
+                d['m_seq'],
+                test_dataset.mask_token_id,
+                temperature=0.5,
+                p=0.9,
+                unmasking_order='start'
+            )
+            if total_self_attns is None:
+                total_self_attns, total_cross_attns = model.get_attention_maps()
+            else:
+                self_attns_tmp, cross_attns_tmp = model.get_attention_maps()
+                for layer in range(len(self_attns_tmp)):
+                    for head in range(len(self_attns_tmp[layer])):
+                        total_self_attns[layer][head] += self_attns_tmp[layer][head]
+                for layer in range(len(cross_attns_tmp)):
+                    for head in range(len(cross_attns_tmp[layer])):
+                        total_cross_attns[layer][head] += cross_attns_tmp[layer][head]
         save_dir='figs/attn_maps/DE/' + subfolder
         if nvis is not None:
             save_dir += '_nvis' + str(nvis)
-        self_attns, cross_attns = model.get_attention_maps()
         save_attention_maps(
-            self_attns,
+            total_self_attns,
             save_dir=save_dir + '/self/',
             prefix='self',
             title_info=True
         )
 
         save_attention_maps(
-            cross_attns,
+            total_cross_attns,
             save_dir=save_dir + '/cross/',
             prefix='cross',
             title_info=True
