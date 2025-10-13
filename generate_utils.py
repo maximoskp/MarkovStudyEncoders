@@ -35,7 +35,8 @@ def nucleus_token_by_token_generate(
         entropies = -(probs * probs.clamp_min(1e-9).log()).sum(dim=-1)
 
         if unmasking_order == 'random':
-            pos = masked_positions[torch.randint(0, masked_positions.numel(), (1,))].item()
+            idx = torch.randint(0, masked_positions.numel(), (1,))
+            pos = masked_positions[idx].item()
         elif unmasking_order == 'uncertain':
             pos = masked_positions[torch.argmax(entropies)].item()
         elif unmasking_order == 'certain':
@@ -49,6 +50,7 @@ def nucleus_token_by_token_generate(
 
         # --- Nucleus sampling step ---
         logits_pos = logits[0, pos] / temperature
+        logits_pos[ mask_token_id ] = logits_pos.min().item()/100  # prevent selecting mask token
         probs_pos = torch.softmax(logits_pos, dim=-1)
 
         # sort probs descending
